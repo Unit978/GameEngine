@@ -32,7 +32,7 @@ int main(int argc, char* args[]){
     cout << t->getName() << endl;
     cout << t2->getName() << endl;
 
-    //Shader shader("shaders/basic_shader");
+    Shader shader("shaders/basic_shader");
 
     engine.run();
 

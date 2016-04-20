@@ -24,7 +24,7 @@ Shader::Shader(const string& shader_filepath){
         glAttachShader(shaderProgramID, shaders[i]);
 
     // This needs to be done before linking and validation.
-    //glBindAttribLocation(shaderProgramID, 0, "position");
+    glBindAttribLocation(shaderProgramID, 0, "position");
     glBindAttribLocation(shaderProgramID, 1, "tex_coord");
     glBindAttribLocation(shaderProgramID, 2, "normal");
 
@@ -39,7 +39,7 @@ Shader::Shader(const string& shader_filepath){
     // Get access to the uniform variable from the GPU
     // 1st param is the program that the uniform belongs to.
     // 2nd param is the exact name of the uniform variable in the shader program code.
-    //uniforms[TRANSFORM_UNI] = glGetUniformLocation(shaderProgramID, "transform");
+    uniforms[TRANSFORM_UNI] = glGetUniformLocation(shaderProgramID, "transform");
 }
 
 Shader::~Shader(){
