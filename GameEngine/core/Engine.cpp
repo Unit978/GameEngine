@@ -7,10 +7,11 @@
  * GLEW_BUILD  is defined for building the DLL library.
  */
 
+#include <iostream>
 #include <GL/glew.h>
 #include <SDL2/SDL_image.h>
+
 #include "Engine.h"
-#include <iostream>
 #include "../util/Timer.h"
 
 using std::cout;
@@ -19,12 +20,10 @@ using std::cerr;
 
 // define statics
 Display* Engine::display = nullptr;
-
 float Engine::deltaTime = 0;
 
 ComponentManager Engine::componentManager;
-
-
+unordered_map<GLenum, string> Engine::glTypeNames;
 
 Engine::Engine() : glcontext(nullptr){
 
@@ -73,7 +72,7 @@ bool Engine::initialize(){
 
     // Order of function calling matters here. SDL must be initialized so we can create the
     // display and the context for it. The context must be created so GLEW can be initialized.
-    bool success = initializeSDL() && createDisplay() && initializeOpenGL();
+    bool success = initializeSDL() && createDisplay() && initializeOpenGL() && initializeSubSystems();
 
     if (!success)
         cerr << "The engine failed to initialize properly.\n";
@@ -164,6 +163,12 @@ bool Engine::initializeSDL(){
     return true;
 }
 
+bool Engine::initializeSubSystems(){
+    setGlTypeNames();
+
+    return true;
+}
+
 bool Engine::createDisplay(){
 
     // Create a default display
@@ -191,4 +196,29 @@ Display* Engine::getDisplay(){
 
 float Engine::getDeltaTime(){
     return deltaTime;
+}
+
+void Engine::getGlTypeName(const GLenum type, string& name){
+    const auto itr = glTypeNames.find(type);
+    if (itr != glTypeNames.end()){
+        name = itr->second;
+    }
+
+    else{
+        cerr << "Error. Name does not exist for GLenum type = " << type << endl;
+        name = "";
+    }
+}
+
+void Engine::setGlTypeNames(){
+
+    glTypeNames.insert(std::pair<GLuint, string>(GL_FLOAT_MAT3, "Matrix3"));
+    glTypeNames.insert(std::pair<GLuint, string>(GL_FLOAT_MAT4, "Matrix4"));
+
+    glTypeNames.insert(std::pair<GLuint, string>(GL_FLOAT_VEC2, "Vector2"));
+    glTypeNames.insert(std::pair<GLuint, string>(GL_FLOAT_VEC3, "Vector3"));
+    glTypeNames.insert(std::pair<GLuint, string>(GL_FLOAT_VEC4, "Vector4"));
+
+    glTypeNames.insert(std::pair<GLuint, string>(GL_INT, "Int"));
+    glTypeNames.insert(std::pair<GLuint, string>(GL_FLOAT, "Float"));
 }

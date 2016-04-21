@@ -1,16 +1,17 @@
+
 #include "Shader.h"
+#include "../core/Engine.h"
 
 #include <fstream>
-#include <iostream>
+#include <vector>
 
-using std::cout;
-using std::cerr;
-using std::endl;
+using std::vector;
 using std::ifstream;
+using std::cout;
 
 Shader::Shader(const string& shader_filepath){
 
-    shaderProgramID = glCreateProgram();
+    programID = glCreateProgram();
 
     // Obtain the shaders from the the file
     string vertex_shader_code = Shader::loadShaderProgramFile(shader_filepath + ".vs");
@@ -20,26 +21,29 @@ Shader::Shader(const string& shader_filepath){
     shaders[FRAGMENT_SHADER] = Shader::createShader(fragment_shader_code, GL_FRAGMENT_SHADER);
 
     // Attach all the shaders to the program
-    for(unsigned i = 0; i < NUM_SHADERS; i++)
-        glAttachShader(shaderProgramID, shaders[i]);
+    for(unsigned i = 0; i < NUM_SHADERS; i++){
+        glAttachShader(programID, shaders[i]);
+    }
 
     // This needs to be done before linking and validation.
-    glBindAttribLocation(shaderProgramID, 0, "position");
-    glBindAttribLocation(shaderProgramID, 1, "tex_coord");
-    glBindAttribLocation(shaderProgramID, 2, "normal");
+    glBindAttribLocation(programID, 0, "position");
+    glBindAttribLocation(programID, 1, "tex_coord");
+    glBindAttribLocation(programID, 2, "normal");
 
     // Link the compiled shader program to the main application
-    glLinkProgram(shaderProgramID);
-    Shader::checkErrors(shaderProgramID, GL_LINK_STATUS, true, "Error: Shader program failed to link to main application. ");
+    glLinkProgram(programID);
+    Shader::checkErrors(programID, GL_LINK_STATUS, true, "Error: Shader program failed to link to main application. ");
 
     // Check that we have valid shaders
-    glValidateProgram(shaderProgramID);
-    Shader::checkErrors(shaderProgramID, GL_VALIDATE_STATUS, true, "Error: Shader program is invalid. ");
+    glValidateProgram(programID);
+    Shader::checkErrors(programID, GL_VALIDATE_STATUS, true, "Error: Shader program is invalid. ");
 
     // Get access to the uniform variable from the GPU
     // 1st param is the program that the uniform belongs to.
     // 2nd param is the exact name of the uniform variable in the shader program code.
-    uniforms[TRANSFORM_UNI] = glGetUniformLocation(shaderProgramID, "transform");
+    //uniforms[TRANSFORM_UNI] = glGetUniformLocation(shaderProgramID, "transform");
+
+    collectUniforms();
 }
 
 Shader::~Shader(){
@@ -49,17 +53,18 @@ Shader::~Shader(){
     for(unsigned i = 0; i < NUM_SHADERS; i++){
 
         // detach shader from the program
-        glDetachShader(shaderProgramID, shaders[i]);
+        glDetachShader(programID, shaders[i]);
         glDeleteShader(shaders[i]);
     }
 
-    glDeleteProgram(shaderProgramID);
+    glDeleteProgram(programID);
 }
 
 void Shader::bind() const{
-    glUseProgram(shaderProgramID);
+    glUseProgram(programID);
 }
 
+/*
 void Shader::update(const Transform& transform, const Camera& camera){
 
     Matrix4 model_view_projection = camera.getViewProjection() * transform.modelMatrix();
@@ -72,8 +77,119 @@ void Shader::update(const Transform& transform, const Camera& camera){
     // 2nd param: how many pieces of data are we going to send in, 1 for a single matrix4
     // 3rd param: boolean, If the matrix needs to be transposed to abide with OpenGL format
     // 4th param: the address of the first element in the matrix
-    glUniformMatrix4fv(uniforms[TRANSFORM_UNI], 1, GL_TRUE, first);
+    glUniformMatrix4fv(uniforms.find("transform")->second.location, 1, GL_TRUE, first);
+}*/
+
+void Shader::collectUniforms(){
+
+    vector<GLchar> uniformNameData(256);
+
+    GLint uniformCount;
+    glGetObjectParameterivARB(programID, GL_OBJECT_ACTIVE_UNIFORMS_ARB, &uniformCount);
+
+    for (GLint uni = 0; uni < uniformCount; uni++){
+
+        GLint arraySize = 0;
+        GLenum type = 0;
+        GLsizei actualLength = 0;
+
+        glGetActiveUniform(programID, uni, uniformNameData.size(), &actualLength, &arraySize, &type, &uniformNameData[0]);
+
+        string uniformName(static_cast<char*>(&uniformNameData[0]), actualLength);
+
+        std::pair<string, UniformData> unipair(uniformName, UniformData(uniformName, type, uni));
+        uniforms.insert(unipair);
+    }
 }
+
+void Shader::setUniform(const Shader::UniformData& uniData, const Matrix3& mat){
+    if (uniData.type != GL_FLOAT_MAT3){
+        reportUniformTypeError(uniData, GL_FLOAT_MAT3);
+        return;
+    }
+
+    const float* first = &mat.elements[0][0];
+    glUniformMatrix3fv(uniData.location, 1, GL_TRUE, first);
+}
+
+void Shader::setUniform(const Shader::UniformData& uniData, const Matrix4& mat){
+    if  (uniData.type != GL_FLOAT_MAT4){
+        reportUniformTypeError(uniData, GL_FLOAT_MAT4);
+        return;
+    }
+
+    const float* first = &mat.elements[0][0];
+    glUniformMatrix4fv(uniData.location, 1, GL_TRUE, first);
+}
+
+void Shader::setUniform(const Shader::UniformData& uniData, const Vector2& vec){
+    if (uniData.type != GL_FLOAT_VEC2){
+        reportUniformTypeError(uniData, GL_FLOAT_VEC2);
+        return;
+    }
+
+    const float* first = &vec.components[0];
+    glUniform2fv(uniData.location, 1, first);
+}
+
+void Shader::setUniform(const Shader::UniformData& uniData, const Vector3& vec){
+    if (uniData.type != GL_FLOAT_VEC3){
+        reportUniformTypeError(uniData, GL_FLOAT_VEC3);
+        return;
+    }
+
+    const float* first = &vec.components[0];
+    glUniform3fv(uniData.location, 1, first);
+}
+
+void Shader::setUniform(const Shader::UniformData& uniData, const Vector4& vec){
+    if (uniData.type != GL_FLOAT_VEC4){
+        reportUniformTypeError(uniData, GL_FLOAT_VEC4);
+        return;
+    }
+
+    const float* first = &vec.components[0];
+    glUniform4fv(uniData.location, 1, first);
+}
+
+void Shader::setUniform(const Shader::UniformData& uniData, const int& val){
+    if (uniData.type != GL_INT){
+        reportUniformTypeError(uniData, GL_INT);
+        return;
+    }
+    glUniform1iv(uniData.location, 1, &val);
+}
+
+void Shader::setUniform(const Shader::UniformData& uniData, const float& val){
+    if (uniData.type != GL_FLOAT){
+        reportUniformTypeError(uniData, GL_FLOAT);
+        return;
+    }
+
+    glUniform1fv(uniData.location, 1, &val);
+}
+
+GLuint Shader::getProgramID() const{
+    return programID;
+}
+
+// CTOR for the UniformData struct.
+Shader::UniformData::UniformData(const string& name, const GLenum type, const GLuint location) :
+    name(name), type(type), location(location) {}
+
+void Shader::reportUniformTypeError(const Shader::UniformData& uniData, const GLenum expectedType){
+
+    string uniTypeName;
+    Engine::getGlTypeName(uniData.type, uniTypeName);
+
+    string expectedTypeName;
+    Engine::getGlTypeName(expectedType, expectedTypeName);
+
+    cerr << "Error. Type mismatch when setting value for uniform '" << uniData.name << '\'' << endl;
+    cerr << "\tActual type enum held by uniform: " << uniTypeName << endl;
+    cerr << "\tType passed to set the uniform value: " << expectedTypeName << endl;
+}
+
 
 string Shader::loadShaderProgramFile(const string& shader_filepath){
 
