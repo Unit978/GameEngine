@@ -13,14 +13,10 @@ public:
     unsigned getId() const;
 
     template<typename T>
-    T* addComponent(){
-        return Engine::componentManager.addComponent<T>(id);
-    }
+    T* addComponent();
 
     template<typename T>
-    T* getComponent(){
-        return Engine::componentManager.getComponent<T>(id);
-    }
+    T* getComponent();
 
 protected:
 
@@ -28,5 +24,15 @@ private:
     unsigned id;
 
 };
+
+template<typename T>
+T* Entity::addComponent(){
+    return Engine::componentManager.addComponent<T>(id);
+}
+
+template<typename T>
+T* Entity::getComponent(){
+    return Engine::componentManager.getComponent<T>(id);
+}
 
 #endif // ENTITY_H

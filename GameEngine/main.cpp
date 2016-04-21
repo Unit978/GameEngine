@@ -8,6 +8,7 @@
 #include "entity/Entity.h"
 
 #include <iostream>
+#include <vector>
 
 using namespace std;
 
@@ -32,8 +33,34 @@ int main(int argc, char* args[]){
     cout << t->getName() << endl;
     cout << t2->getName() << endl;
 
-    Shader shader("shaders/basic_shader");
+    Shader shader("shaders/basic_lighting_shader");
 
+    Matrix4 mvp;
+    // Vector3 pos;
+    shader.setUniformValue("transform", mvp);
+
+/*
+    GLint maxAttribNameLen = 0;
+    glGetProgramiv(shader.getProgramID(), GL_ACTIVE_ATTRIBUTE_MAX_LENGTH, &maxAttribNameLen);
+    vector<GLchar> attribNameData(maxAttribNameLen);
+
+    GLint attribCount = 0;
+    glGetProgramiv(shader.getProgramID(), GL_ACTIVE_ATTRIBUTES, &attribCount);
+
+    cout << "attribute count: " << attribCount << endl;
+
+    for (GLint attrib = 0; attrib < attribCount; attrib++){
+        GLint arraySize = 0;
+        GLenum type = 0;
+        GLsizei actualLen = 0;
+        glGetActiveAttrib(shader.getProgramID(), attrib, attribNameData.size(), &actualLen, &arraySize, &type, &attribNameData[0]);
+
+        string attribName((char*)&attribNameData[0], actualLen);
+        cout << "Attribute name: " << attribName << " type: " << type << endl;
+    }
+
+    cout << "mat4: " << GL_FLOAT_MAT4 << endl;
+*/
     engine.run();
 
     /*

@@ -7,10 +7,13 @@
 #ifndef ENGINE_H
 #define ENGINE_H
 
-#include "Display.h"
+#include <unordered_map>
 #include <SDL2/SDL_opengl.h>
 
+#include "Display.h"
 #include "../components/ComponentManager.h"
+
+using std::unordered_map;
 
 class Engine{
 
@@ -26,6 +29,9 @@ public:
 
     static ComponentManager componentManager;
 
+    // Sets the string representation of the OpenGL enum type.
+    static void getGlTypeName(const GLenum type, string& name);
+
 private:
 
     // Game window
@@ -36,11 +42,13 @@ private:
 
     float static deltaTime;
 
-    //static ComponentManager* componentManager;
+    static unordered_map<GLenum, string> glTypeNames;
+    static void setGlTypeNames();
 
     bool initializeGLEW();
     bool initializeSDL();
     bool initializeOpenGL();
+    bool initializeSubSystems();
     bool createDisplay();
     void cleanUp();
 };
